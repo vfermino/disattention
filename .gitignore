@@ -31,3 +31,4 @@ Thumbs.db
 checkpoints*
 *.bin
 data
+models
