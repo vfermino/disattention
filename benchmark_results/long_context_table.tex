@@ -1,0 +1,15 @@
+\begin{table}[h]
+\centering
+\caption{Long-context utilisation: perplexity on next-64 tokens
+after feeding contexts of increasing length. Lower is better.}
+\label{tab:longctx}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Context Length} & \textbf{DisattentionFormer V1} & \textbf{DisattentionFormer V2 (Titans)} & \textbf{Baseline Transformer} \\
+\midrule
+128 tokens & 628.53 (6.4434) & 432.84 (6.0704) & 365.07 (5.9001) \\
+256 tokens & 658.58 (6.4901) & 457.91 (6.1267) & 362.77 (5.8938) \\
+512 tokens & 680.57 (6.5229) & 466.09 (6.1444) & 367.8 (5.9076) \\
+\bottomrule
+\end{tabular}
+\end{table}

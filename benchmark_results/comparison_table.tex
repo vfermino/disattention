@@ -1,0 +1,33 @@
+\begin{table}[h]
+\centering
+\caption{Quantitative comparison on the mythic--Joycean corpus (3 models).
+All models trained for 10 epochs with identical optimisation schedule.}
+\label{tab:benchmark}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Metric} & \textbf{DisattentionFormer V1} & \textbf{DisattentionFormer V2 (Titans)} & \textbf{Baseline Transformer} \\
+\midrule
+Parameters & 27,722,496 & 25,690,112 & 27,783,984 \\
+$d_{{\text{{model}}}}$ & 256 & 256 & 272 \\
+Layers & 8 & 6 & 12 \\
+Heads & 8 & 8 & 8 \\
+$d_{{\text{{ff}}}}$ & 1024 & 1024 & 1088 \\
+\midrule
+Perplexity & 845.84 & 522.27 & 339.01 \\
+CE Loss & 6.7403 & 6.2582 & 5.8260 \\
+\midrule
+PPL (ctx=128) & 628.53 & 432.84 & 365.07 \\
+PPL (ctx=256) & 658.58 & 457.91 & 362.77 \\
+PPL (ctx=512) & 680.57 & 466.09 & 367.8 \\
+\midrule
+Type-Token Ratio & 0.1128 & 0.1526 & 0.1733 \\
+Repetition Rate & 0.2174 & 0.2066 & 0.1924 \\
+Mean Entropy & 6.1664 & 5.9166 & 5.9645 \\
+\midrule
+Tokens/s & 25878 & 2960 & 19824 \\
+\midrule
+Archetype Tensors & $\checkmark$ & $\checkmark$ & --- \\
+Neural Memory & --- & $\checkmark$ & --- \\
+\bottomrule
+\end{tabular}
+\end{table}

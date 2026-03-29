@@ -1,0 +1,864 @@
+\documentclass[12pt,a4paper]{article}
+
+% -----------------------------------------------------------------------
+% Packages
+% -----------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{natbib}
+\bibliographystyle{plainnat}
+
+% Code listings style
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{green!60!black},
+  stringstyle=\color{red!70!black},
+}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!70!black,
+  citecolor=green!50!black,
+  urlcolor=blue!60!black,
+}
+
+% -----------------------------------------------------------------------
+% Title
+% -----------------------------------------------------------------------
+\title{\textbf{Shut Your Eyes and C}\\[0.3em]
+\large Programming Languages, Jungian Archetypes,\\
+and the Architecture of Machine Understanding}
+
+\author{Victor Fermino}
+
+
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present \textsc{DisattentionFormer}, a Transformer architecture that
+embeds Jungian archetypal tensors---pre-computed covariance structures
+derived from mythic and literary passages---as geometric priors that
+deform the attention space. Trained on an intentionally ordered corpus
+of 19~texts spanning from Genesis to Joyce's \textit{Ulysses}, the model
+treats corpus order as architectural structure (\texttt{shuffle=False}).
+We compare \textsc{DisattentionFormer} ($\approx$27.7M parameters) against
+a parameter-matched vanilla Transformer baseline on perplexity, generation
+quality, and archetype activation. Despite its rich philosophical
+scaffolding, the model operates by the same mechanism as every other
+model in the compilatory chain: faithful translation without comprehension.
+It activates archetypal tensors via lexical proximity, not conceptual
+recognition. It cannot see that the Shadow is the Persona inverted,
+because that requires understanding, and parsers do not understand. The
+work situates itself at the intersection of programming language theory
+(Knuth's Literate Programming), analytical psychology (Jung's archetypal
+theory), and deep learning, arguing that neural architectures---like C
+compilers, like obfuscated code---are grammars that constrain expression
+without generating meaning, and that \emph{understanding this} is more
+valuable than prompting a black box to produce plausible text.
+\end{abstract}
+
+\section{Introduction: The Act of Translation}
+\label{sec:introduction}
+
+% NOTE: This section incorporates and expands the content from the
+% original "Shut Your Eyes and C" manuscript (pages 1--3).
+% The user's existing text about Hello World in C, obfuscated C,
+% and the compiler-as-translator metaphor should be placed here,
+% followed by the transition into ML architectures.
+
+The act of developing software is an act of translation. When someone
+writes a program that says \texttt{"Hello world"}, what they are doing
+is finding an interface to meet the machine at the halfway point---just
+like when one learns how to flex their tongue and extend a vowel to say
+\textit{Ol\'a} in Portuguese as opposed to \textit{Hola} in Spanish.
+
+\begin{lstlisting}[language=C, caption={The canonical greeting.}]
+#include <stdio.h>
+int main() {
+    printf("Hello world");
+    return 0;
+}
+\end{lstlisting}
+
+One might wonder what is happening. Is it bureaucracy from a bygone era
+of basement-dwelling programmers who wanted everything to be complicated?
+If we take this apparent verbosity in context, however, we can clearly see
+the attempt to make everything clear---a way of making things
+\emph{communicable} to a machine, or to a compiler, which is just a
+translator.
+
+\texttt{\#include} instructs the compiler to include a different library;
+\texttt{<stdio.h>} is the standard input/output library, so the compiler
+knows that this program depends on a terminal window. The \texttt{main()}
+method is the main thing that will happen. The \texttt{int} return
+condition means the method expects an integer at the end: zero means
+success; any other number signals an error.
+
+We could say that this whole process of displaying a few words on a black
+screen is too complex, but the structure itself is somewhat similar to how
+we say \textit{Ciao!}\ in Italian: there is a social context for when we
+are going to say something (the inclusion of a library for standard
+communication), then the act of speech (a method), and then the utterance
+itself.
+
+\subsection{Obfuscation as Poetics}
+
+There are competitions such as the International Obfuscated C Code Contest
+(IOCCC, since 1984) that award code which is \emph{creatively} obfuscated.
+Consider a program that calculates $\pi$ by looking at its own area---a
+circle of underscores whose macro definition hides the counting logic. The
+code is simultaneously valid C \emph{and} a visual poem. This is not
+unlike how Joyce's \textit{Finnegans Wake} is simultaneously valid English
+\emph{and} something else entirely: a portmanteau language that demands the
+reader become a compiler.
+
+\subsection{From Compilation to Generation}
+
+All of this might seem too deterministic, and it is, when it comes to basic
+translations. Any LLM, when prompted with a ``Hello world,'' will respond
+differently. But let us consider \emph{temperature}, or better yet,
+\emph{entropy}, which is what makes current AI paradigms what they are known
+for.
+
+A Transformer is, at its core, a text prediction system. If we write
+``The author of \textit{Ulysses} is James \_\_\_\_\_,'' a well-trained
+model will have ``Joyce'' as the most likely outcome. But it will also
+predict the next few tokens---usually an explanation or a biography.
+Current LLM architectures have multiple steps to turn mere prediction
+into something that \emph{feels} alive: they usually do not pick the most
+likely outcome, and deciding the weight is basically prioritising some
+predictions over others.
+
+This raises a question that is as much linguistic as it is computational:
+\textbf{what if the architecture itself could carry meaning?} What if,
+instead of treating the Transformer as a neutral vessel for statistical
+patterns, we designed its components to embody a specific theory of how
+meaning is structured?
+
+And, more provocatively: what would it reveal if the answer were
+\emph{not much}?
+
+This paper pursues both questions simultaneously. We build a Transformer
+whose architecture encodes Jungian archetypal theory as geometric
+structure. We give it every advantage: hand-crafted curvature tensors,
+an intentionally ordered mythic corpus, auxiliary losses designed to
+maximise internal differentiation. And we show that, despite all this,
+the model still operates at the level of lexical fingerprints---activating
+``Great Father'' for Genesis not because it grasps the concept of
+patriarchal divinity but because the words overlap with its seed passages.
+It cannot recognise that the Shadow is the Persona inverted, because
+\emph{that requires understanding}, and parsers do not understand.
+
+The argument is not that the architecture fails. The argument is that its
+\emph{mode of success}---statistical pattern matching within a structured
+geometric bias---is the same mode of success at every level of the
+compilatory chain, from \texttt{gcc} translating \texttt{printf} to a
+syscall, to GPT-4 translating a prompt into plausible prose. The
+temperature, the nucleus sampling, the apparent creativity---it is
+obfuscated C all the way down.
+
+% ======================================================================
+\section{Background}
+\label{sec:background}
+
+\subsection{Programming Languages as Communication}
+\label{sec:literate}
+
+Knuth's Literate Programming \citep{knuth1984literate} proposed that
+programs should be written primarily for human understanding, with machine
+execution as a secondary concern. The program becomes a \emph{text}, and
+the act of programming becomes an act of \emph{writing}. This inverts the
+conventional view: the compiler is not the audience---the reader is.
+
+We extend this insight: if programming is writing, then the
+\emph{architecture} of a neural network is its \emph{grammar}. The choice
+of attention mechanism, normalisation strategy, and feed-forward structure
+are not merely engineering decisions---they are \emph{syntactic choices}
+that constrain what the model can express, just as the choice between C
+and Malbolge constrains what a programmer can communicate.
+
+\subsection{Jungian Archetypes as Structural Priors}
+\label{sec:jung}
+
+Carl Gustav Jung proposed that beneath individual consciousness lies a
+\emph{collective unconscious}---a shared psychic substrate populated by
+\emph{archetypes}: recurring patterns of image, narrative, and affect
+that manifest across cultures \citep{jung1968archetypes}. The archetypes
+are not content but \emph{form}: the Hero is not any particular hero but
+the \emph{pattern} by which heroism is recognised.
+
+We operationalise 16~Jungian archetypes as geometric priors.
+The selection requires justification: Jung himself never fixed a
+canonical list. The \emph{Collected Works} treat archetypes as an
+open set---``as many archetypes as there are typical situations in
+life'' \citep[p.\,48]{jung1968archetypes}---while elaborating only a
+handful in detail. Our 16 are drawn from three tiers of textual
+authority:
+
+\paragraph{Tier~1: Archetypes with dedicated treatment in Jung's
+\emph{Collected Works}.}
+Seven archetypes are extensively theorised by Jung himself:
+\textbf{Self} (CW~9/2, \emph{Aion}),
+\textbf{Shadow} (CW~9/2, ch.\,2--3),
+\textbf{Anima} and \textbf{Animus} (CW~9/2, ch.\,3--4; CW~7),
+\textbf{Persona} (CW~7, \emph{Two Essays on Analytical Psychology}),
+\textbf{Wise Old Man}~/ \textbf{Spirit} (CW~9/1, ``The Phenomenology
+of the Spirit in Fairy Tales''), and
+\textbf{Divine Child} (CW~9/1, ``The Psychology of the Child
+Archetype,'' joint with Ker\'enyi).
+These are uncontroversial.
+
+\paragraph{Tier~2: Archetypes named and characterised by Jung but
+elaborated by his successors.}
+Six archetypes are grounded in Jung's texts but received their full
+theoretical articulation in the post-Jungian literature:
+\textbf{Great Mother} and \textbf{Great Father} (named in CW~5,
+\emph{Symbols of Transformation}; systematised by
+Neumann~\citeyearpar{neumann1955great}),
+\textbf{Hero} (present throughout CW~5; codified by
+Campbell~\citeyearpar{campbell1949hero}),
+\textbf{Trickster} (CW~9/1, ``On the Psychology of the Trickster
+Figure''),
+\textbf{Kore} (CW~9/1, ``The Psychological Aspects of the Kore''),
+and \textbf{Puer Aeternus} (CW~5; given its canonical treatment by
+von Franz).
+
+\paragraph{Tier~3: Structural constructs used by Jung as organising
+principles.}
+Two entries are not archetypes in the strict imagistic sense but
+structural categories that Jung uses to describe the psyche's
+self-organisation:
+\textbf{Senex} (the polar opposite of the Puer, named by Jung in
+CW~5 as Saturn/Kronos and formalised by Hillman) and
+\textbf{Quaternity} (CW~11, \emph{Psychology and Religion}; CW~12,
+\emph{Psychology and Alchemy}---Jung's term for the fourfold structure
+of psychic wholeness).
+
+\paragraph{Why 16?}
+The number is neither sacred nor arbitrary. It is the smallest set that
+covers: (i)~the core ego--Self axis (Self, Shadow, Persona);
+(ii)~the contrasexual pair (Anima, Animus); (iii)~the parental
+imagos (Great Mother, Great Father); (iv)~the developmental spectrum
+(Divine Child, Puer, Hero, Senex, Wise Old Man); (v)~the liminal and
+structural figures (Trickster, Kore, Spirit, Quaternity). Any fewer
+omits a structurally necessary pole; any more would require archetypes
+that Jung himself did not identify, or would split existing ones into
+sub-variants without clear theoretical warrant.
+
+\paragraph{Why not more---or different?}
+It should be noted that nothing in the architecture limits the number or
+provenance of the curvature tensors. The metric $M = I + \sum_k w_k C_k$
+accepts any number of tensors $C_k$ built from any source.
+One could add Campbellian monomyth stages, Greimasian actantial roles,
+Proppian narrative functions, Platonic forms, Aristotelian categories, or
+curvature tensors derived from entirely non-Western ontologies such as
+the \emph{gu\d{n}as} of S\=a\.{n}khya philosophy or the five
+\emph{xing} of Chinese cosmology. Each would
+produce a different deformation of the attention space---a different
+grammar, in the sense of Section~\ref{sec:literate}.
+
+The \textsc{DisattentionFormer} is therefore better understood not as a
+\emph{Jungian} model but as a \emph{framework for embedding any
+philosophical theory of form} as geometric structure in a Transformer.
+The 16~Jungian archetypes are the instance we study; the architecture is
+the general case. This generality is itself part of the argument: the
+model does not \emph{understand} Jung any more than it would understand
+Aristotle. It applies the covariance fingerprint of whatever passages
+it is given. The philosophical content is in the researcher's choice of
+tensors, not in the model's comprehension of them.
+
+The 16 are enumerated below:
+
+\begin{enumerate}[noitemsep]
+  \item \textbf{Self} --- psychic totality, the mandala
+  \item \textbf{Shadow} --- the unintegrated, the double
+  \item \textbf{Anima} --- the feminine in the masculine psyche
+  \item \textbf{Animus} --- the masculine in the feminine psyche
+  \item \textbf{Great Mother} --- primordial feminine (nurturance/devouring)
+  \item \textbf{Great Father} --- primordial masculine (law/tyranny)
+  \item \textbf{Hero} --- ego confronting the unconscious
+  \item \textbf{Wise Old Man} --- spirit as knowledge
+  \item \textbf{Persona} --- the social mask
+  \item \textbf{Puer Aeternus} --- the eternal youth
+  \item \textbf{Senex} --- the old order, Saturn
+  \item \textbf{Trickster} --- the boundary transgressor
+  \item \textbf{Kore/Maiden} --- innocence and forced descent
+  \item \textbf{Divine Child} --- pure potentiality
+  \item \textbf{Spirit} --- orientation and illumination
+  \item \textbf{Quaternity} --- the four functions, completeness
+\end{enumerate}
+
+Each archetype is converted into a curvature tensor $C_k \in
+\mathbb{R}^{d \times d}$ via the following process: 10~representative
+passages are encoded using a sentence transformer, their covariance
+matrix is computed, projected to the model dimension via
+Johnson--Lindenstrauss random projection, and trace-normalised
+(\Cref{sec:tensors}).
+
+\subsection{The Corpus as Architecture}
+\label{sec:corpus}
+
+The training corpus is \emph{not shuffled}. The sequence of 19~texts
+follows a deliberate mythic progression:
+
+\begin{enumerate}[noitemsep]
+  \item \textbf{Creation phase:} Genesis $\to$ Rigveda Hymns $\to$ Popol Vuh
+  \item \textbf{Heroic phase:} Iliad $\to$ Odyssey $\to$ Gilgamesh
+  \item \textbf{Descent phase:} Homeric Hymns $\to$ Dante's Commedia
+  \item \textbf{Transformation:} Grimm Tales $\to$ Blake (Songs, Prophetic, Marriage)
+  \item \textbf{Individuation:} Vico's \textit{Scienza Nuova} $\to$ Joyce (Chamber Music $\to$ Dubliners $\to$ Portrait $\to$ Exiles $\to$ Ulysses)
+\end{enumerate}
+
+This ordering follows Vico's \textit{corsi e ricorsi}: theocratic $\to$
+heroic $\to$ human $\to$ ricorso. The archetypal ``contamination'' of one
+text over the next is the central mechanism---not a bug but the
+architecture itself.
+
+% ======================================================================
+\section{The DisattentionFormer Architecture}
+\label{sec:architecture}
+
+\subsection{Overview}
+
+The \textsc{DisattentionFormer} is a pre-norm Transformer
+($d_{\text{model}} = 256$, $n_{\text{heads}} = 8$, $n_{\text{layers}} = 8$,
+$d_{\text{ff}} = 1024$) augmented with four novel components:
+
+\begin{enumerate}[noitemsep]
+  \item \textbf{ArchetypalProjection} --- metric curvature via archetype
+    tensors
+  \item \textbf{SymbolAttention} --- self-attention in curved space
+  \item \textbf{TensionFFN} --- opposing-pole feed-forward network
+  \item \textbf{IndividuationNorm} --- depth-decaying normalisation
+  \item \textbf{TranscendentFunction} --- archetype-gated synthesis
+\end{enumerate}
+
+The complete forward pass is:
+\begin{align}
+  \mathbf{x} &= \text{TokenEmb}(\text{ids}) + \text{PosEmb} \\
+  M &= I + \sum_{k=1}^{16} w_k \, C_k, \quad
+       w = \text{softmax}\!\left(\frac{\bar{\mathbf{x}} \cdot Q}{\sqrt{d}}\right) \\
+  \mathbf{x}_{\text{curved}} &= \mathbf{x} \, M \\
+  \text{(repeat } &8 \text{ blocks)} \notag \\
+  \mathbf{x} &= \text{TranscendentFunction}(\mathbf{x}, w) \\
+  \text{logits} &= \mathbf{x} \, W_{\text{emb}}^{\top} \quad \text{(weight tying)}
+\end{align}
+
+\subsection{Archetypal Curvature Tensors}
+\label{sec:tensors}
+
+For each archetype $k$, we select 10~canonical passages (e.g., for the
+Hero: the call to adventure, the belly of the whale, the apotheosis).
+These are encoded into embeddings $\mathbf{e}_i \in \mathbb{R}^{384}$ using
+\texttt{all-MiniLM-L6-v2}, centered, and their covariance computed:
+\begin{equation}
+  C_k^{\text{raw}} = \frac{1}{9} \sum_{i=1}^{10}
+    (\mathbf{e}_i - \bar{\mathbf{e}})(\mathbf{e}_i - \bar{\mathbf{e}})^{\top}
+\end{equation}
+This is projected from $\mathbb{R}^{384 \times 384}$ to
+$\mathbb{R}^{256 \times 256}$ via a Johnson--Lindenstrauss random matrix
+$R \in \mathbb{R}^{384 \times 256}$ (fixed seed), then trace-normalised:
+\begin{equation}
+  C_k = \frac{R^{\top} C_k^{\text{raw}} R}
+             {\text{tr}(R^{\top} C_k^{\text{raw}} R) + \epsilon}
+\end{equation}
+
+The tensors are \textbf{not trainable}---they are registered as buffers.
+This is deliberate: the collective unconscious precedes individual
+learning.
+
+\subsection{ArchetypalProjection}
+
+The metric curvature $M$ warps the embedding space according to the
+batch's archetypal composition:
+\begin{equation}
+  M = I + \sum_{k=1}^{16} w_k \, C_k, \quad
+  \mathbf{x}_{\text{curved}} = \mathbf{x} \, M
+\end{equation}
+where $w_k = \text{softmax}(\bar{\mathbf{x}} \cdot \mathbf{q}_k / \sqrt{d})$
+and $\mathbf{q}_k$ are learnable query vectors. The identity ensures that
+the model starts as a standard Transformer and learns to \emph{deviate}
+from flatness.
+
+\subsection{SymbolAttention}
+
+Standard self-attention computes scores as $QK^{\top}/\sqrt{d_h}$. We
+insert the metric:
+\begin{equation}
+  \text{Scores} = \frac{(Q \, M) \, K^{\top}}{\sqrt{d_h}}
+\end{equation}
+This means that archetypally distant tokens can become close (or
+closer) if the curvature tensor brings them together---a mythic token
+in the Iliad might attend strongly to a Joycean token in \emph{Ulysses}
+if both activate the Hero archetype.
+
+\subsection{TensionFFN}
+
+Each feed-forward layer computes two opposing views:
+\begin{align}
+  \mathbf{p} &= \text{GELU}(W_1^{+} \, \mathbf{x}) \quad \text{(thesis)} \\
+  \mathbf{n} &= \text{GELU}(W_1^{-} \, (-\mathbf{x})) \quad \text{(antithesis)} \\
+  \mathbf{y} &= W_2 \, [\mathbf{p} \,\|\, \mathbf{n}] \quad \text{(synthesis)}
+\end{align}
+The tension loss encourages the poles to diverge:
+\begin{equation}
+  \mathcal{L}_{\text{tension}} =
+    1 - \cos(\mathbf{p}, \mathbf{n})
+\end{equation}
+maximised via negation in the total loss.
+
+\subsection{IndividuationNorm}
+
+Standard LayerNorm treats all layers identically. IndividuationNorm
+interpolates between collective (normalised) and individual (raw)
+representations based on depth:
+\begin{equation}
+  \text{IndivNorm}_i(\mathbf{x}) =
+    (1 - r_i) \, \text{LayerNorm}(\mathbf{x}) + r_i \, \mathbf{x}, \quad
+    r_i = \frac{i}{N - 1}
+\end{equation}
+
+Early layers ($r \approx 0$): strong normalisation, collective processing.
+Deep layers ($r \approx 1$): minimal normalisation, individual expression.
+
+\subsection{TranscendentFunction}
+
+The final synthesis gate is modulated by the active archetypal field:
+\begin{align}
+  \mathbf{s} &= \tanh(W_s \, \mathbf{x}) \\
+  g &= \sum_{k=1}^{16} w_k \, \sigma(W_{g,k} \, \mathbf{x}) \\
+  \text{out} &= g \cdot \mathbf{s} + (1 - g) \cdot \mathbf{x}
+\end{align}
+
+% ======================================================================
+\section{Training}
+\label{sec:training}
+
+\subsection{Loss Function}
+
+The total loss is:
+\begin{equation}
+  \mathcal{L} = \mathcal{L}_{\text{ce}}
+    + \alpha \, \mathcal{L}_{\text{constellation}}
+    - \beta \, \mathcal{L}_{\text{tension}}
+    - \gamma \, \mathcal{L}_{\text{individuation}}
+\end{equation}
+with $\alpha = 0.10$, $\beta = 0.05$, $\gamma = 0.02$.
+
+\begin{itemize}[noitemsep]
+  \item $\mathcal{L}_{\text{ce}}$: standard cross-entropy (next-token prediction)
+  \item $\mathcal{L}_{\text{constellation}}$: tokens with similar archetypal
+    weights should have similar representations (cosine alignment)
+  \item $\mathcal{L}_{\text{tension}}$: maximise divergence between TensionFFN
+    poles (the model must maintain internal conflict)
+  \item $\mathcal{L}_{\text{individuation}}$: maximise representation divergence
+    from the batch centroid (each token should become itself)
+\end{itemize}
+
+\subsection{Training Configuration}
+
+Both models were trained on an Apple~M3 MacBook Pro (18\,GB) using MPS
+backend in float32 (no AMP). Identical hyperparameters except architecture:
+
+\begin{table}[H]
+\centering
+\caption{Training configuration (shared).}
+\label{tab:training-config}
+\begin{tabular}{ll}
+\toprule
+\textbf{Hyperparameter} & \textbf{Value} \\
+\midrule
+Optimiser       & AdamW ($\beta_1 = 0.9$, $\beta_2 = 0.95$) \\
+Learning rate   & $1 \times 10^{-4}$ \\
+Schedule        & Linear warmup (2000 steps) + cosine decay \\
+Weight decay    & 0.1 (dim $\geq 2$), 0.0 (biases, norms) \\
+Batch size      & 4 \\
+Sequence length & 512 tokens \\
+Gradient clip   & 1.0 (max norm) \\
+Epochs          & 10 \\
+Precision       & float32 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Corpus Details}
+
+The tokeniser is word-level with 62\,417~types built from the corpus.
+The 19~source texts total approximately~X million words (see
+\Cref{sec:corpus}).
+
+% ======================================================================
+\section{Baseline: Parameter-Matched Transformer}
+\label{sec:baseline}
+
+To isolate the contribution of the DisattentionFormer's novel components,
+we train a standard pre-norm Transformer with matched parameter count:
+
+\begin{table}[H]
+\centering
+\caption{Architectural comparison.}
+\label{tab:arch-comparison}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Component} & \textbf{DisattentionFormer} & \textbf{Baseline} \\
+\midrule
+$d_{\text{model}}$          & 256       & 272       \\
+$n_{\text{heads}}$          & 8         & 8         \\
+$d_{\text{head}}$           & 32        & 34        \\
+$n_{\text{layers}}$         & 8         & 12        \\
+$d_{\text{ff}}$             & 1024      & 1088      \\
+max seq.\ len.              & 512       & 512       \\
+Dropout                     & 0.1       & 0.1       \\
+\midrule
+Archetype Tensors ($C_k$)   & \checkmark & ---      \\
+SymbolAttention              & \checkmark & ---      \\
+TensionFFN                   & \checkmark & ---      \\
+IndividuationNorm            & \checkmark & ---      \\
+TranscendentFunction         & \checkmark & ---      \\
+Auxiliary Losses             & \checkmark & ---      \\
+\midrule
+Total parameters            & $\approx$27,722,496 & $\approx$27,783,712 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The baseline uses standard multi-head self-attention, GELU feed-forward,
+pre-norm LayerNorm, and weight tying. It is trained with identical
+hyperparameters, the same corpus, and the same tokeniser. The only
+loss is cross-entropy.
+
+Note that the baseline has more layers (12 vs.\ 8) and a slightly wider
+hidden dimension (272 vs.\ 256) to match the parameter count. This
+\emph{favours} the baseline: more depth typically improves language
+modelling \citep{devlin2019bert}, and the baseline allocates its entire
+parameter budget to language modelling rather than splitting it with
+auxiliary components.
+
+% ======================================================================
+\section{Results}
+\label{sec:results}
+
+% These values will be filled in after running benchmark.py
+% Use \input{../benchmark_results/comparison_table.tex} to include
+% the auto-generated table.
+
+\subsection{Perplexity}
+
+\begin{table}[H]
+\centering
+\caption{Validation set metrics after 10 epochs of training.}
+\label{tab:results}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{DisattentionFormer} & \textbf{Baseline} \\
+\midrule
+Val.\ CE Loss       & \texttt{TBD} & \texttt{TBD} \\
+Val.\ Perplexity    & \texttt{TBD} & \texttt{TBD} \\
+Mean Token Entropy   & \texttt{TBD} & \texttt{TBD} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Training Dynamics}
+
+The DisattentionFormer's training exhibited several distinctive patterns:
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Loss decomposition:} Final epoch averages---$\mathcal{L}_{\text{ce}} \approx 6.5$,
+    $\mathcal{L}_{\text{constellation}} \approx -0.025$,
+    $\mathcal{L}_{\text{tension}} \approx 0.97$,
+    $\mathcal{L}_{\text{individuation}} = 10.0$ (clamped).
+  \item \textbf{Individuation saturation:} $\mathcal{L}_{\text{individuation}}$
+    immediately saturated at its clamp value of 10.0, suggesting the model
+    maximises representation divergence to the limit of what we allow.
+  \item \textbf{Tension convergence:} $\mathcal{L}_{\text{tension}}$ increased
+    monotonically from $\approx$0.88 to $\approx$0.97, indicating the
+    TensionFFN poles are learning to diverge throughout training.
+  \item \textbf{Dominant archetype shift:} Great Mother dominated early training
+    (creation texts), shifting to Trickster by the middle epochs (heroic and
+    Joycean texts).
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+% Placeholder for training curves
+% \input{figures/training_curves.pgf}
+\fbox{\parbox{0.9\textwidth}{\centering\vspace{3em}
+  Training loss curves: DisattentionFormer (total, CE, auxiliary)
+  vs.\ Baseline (CE only). To be generated from training logs.
+  \vspace{3em}}}
+\caption{Training loss over 10 epochs (7280 steps per model).}
+\label{fig:training-curves}
+\end{figure}
+
+\subsection{Generation Quality}
+
+\begin{table*}[t]
+\centering
+\caption{Generation samples from thematic prompts (temperature $= 0.8$,
+  nucleus $p = 0.9$, 100 tokens).}
+\label{tab:generation}
+\small
+\begin{tabular}{p{2.5cm}p{5.5cm}p{5.5cm}}
+\toprule
+\textbf{Prompt} & \textbf{DisattentionFormer} & \textbf{Baseline} \\
+\midrule
+``In the beginning'' & \texttt{TBD} & \texttt{TBD} \\
+\midrule
+``Stately, plump'' & \texttt{TBD} & \texttt{TBD} \\
+\midrule
+``I will not serve'' & \texttt{TBD} & \texttt{TBD} \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsection{Archetype Activation Analysis}
+
+% DisattentionFormer-specific analysis
+
+\begin{table}[H]
+\centering
+\caption{Archetype activation frequencies across thematic prompts
+  (DisattentionFormer). Each cell shows the fraction of generated
+  tokens for which the given archetype was dominant.}
+\label{tab:archetypes}
+\begin{tabular}{lc}
+\toprule
+\textbf{Archetype} & \textbf{Frequency} \\
+\midrule
+Self           & \texttt{TBD} \\
+Shadow         & \texttt{TBD} \\
+Anima          & \texttt{TBD} \\
+Great Mother   & \texttt{TBD} \\
+Great Father   & \texttt{TBD} \\
+Hero           & \texttt{TBD} \\
+Trickster      & \texttt{TBD} \\
+\emph{(others)}& \texttt{TBD} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ======================================================================
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Architecture as Grammar}
+
+The central thesis of this paper is that the \emph{architecture} of a
+neural network is a \emph{language}---not metaphorically, but structurally.
+Just as the C compiler enforces a particular relationship between the
+programmer's intention and the machine's execution, the Transformer's
+attention mechanism enforces a particular relationship between tokens.
+
+The DisattentionFormer makes this explicit. Its components are not
+arbitrary engineering choices but deliberate \emph{syntactic} commitments:
+
+\begin{itemize}[noitemsep]
+  \item \textbf{ArchetypalProjection} is a \emph{declension}---it inflects
+    the embedding space according to archetypal context, like how the
+    genitive case in Latin inflects a noun according to its possessor.
+  \item \textbf{TensionFFN} is a \emph{dialectic}---thesis ($+\mathbf{x}$)
+    and antithesis ($-\mathbf{x}$) coexist without resolution, like the
+    opposing clauses of a Joycean sentence.
+  \item \textbf{IndividuationNorm} is a \emph{voice}---early layers speak
+    in a collective register (normalised), while deep layers speak
+    individually (raw).
+  \item \textbf{TranscendentFunction} is a \emph{conjugation}---it modulates
+    the output according to tense (which archetypes are active), producing
+    the appropriate inflection of meaning.
+\end{itemize}
+
+\subsection{A Compiler for the Collective Unconscious}
+\label{sec:compiler}
+
+The most revealing result of this work is not quantitative but structural.
+We built what might be called a \emph{compiler for the collective
+unconscious}: an architecture that takes Jungian theory as source code,
+covariance geometry as intermediate representation, and curved attention
+as executable output. And it compiled. It took our rich symbolic input and
+reduced it to covariance matrices. It took mythic progression and reduced
+it to training-order effects. It took the tension between thesis and
+antithesis and reduced it to cosine distance.
+
+Consider the analogy at three levels of the compilatory chain:
+
+\begin{enumerate}
+  \item \textbf{The C compiler} translates human intent to machine
+    execution. It does not \emph{understand} \texttt{"Hello world"};
+    it parses syntax, resolves symbols, emits instructions. But the
+    structure of C---types, functions, return codes---shapes \emph{what
+    can be said}. The grammar is not understanding, but it constrains
+    communication.
+  \item \textbf{The vanilla Transformer} translates statistical
+    regularities into predictions. It does not \emph{understand} Joyce;
+    it parses co-occurrence patterns across 62\,417 tokens. The
+    architecture---attention, FFN, LayerNorm---shapes \emph{what can be
+    learned}. The architecture is not understanding, but it constrains
+    generation.
+  \item \textbf{The DisattentionFormer} encodes philosophical structure
+    into the architecture itself. Jungian archetypes as curvature,
+    opposing poles in the FFN, depth-decaying norms. We give it every
+    advantage: the theory is explicit, the geometry is precise, the
+    corpus is ordered. And what happens? The model still operates at
+    the level of lexical fingerprints. It activates ``Great Father''
+    for Genesis not because it grasps patriarchal divinity but because
+    the words overlap. The architecture is not understanding---it is
+    a more elaborate grammar.
+\end{enumerate}
+
+At each level, the same operation occurs: \textbf{faithful translation
+without comprehension}. The IOCCC connection from Section~\ref{sec:introduction}
+is not decorative but structural. Obfuscated C code and LLM output
+share the same property: \emph{surface complexity emerging from mechanical
+simplicity}, with the human observer supplying the meaning. The circle
+of underscores that computes $\pi$ is, underneath, just \texttt{--F} and
+\texttt{OO++}. The Transformer that generates Joycean prose is, underneath,
+just matrix multiplications and softmax distributions.
+
+This is not a limitation to lament but a fact to understand.
+The value of understanding it---\emph{really} understanding it, as a
+programmer understands what \texttt{int main()} does---is greater than
+the value of prompting a black box to produce plausible text.
+
+\subsection{What the Tensors Cannot See}
+\label{sec:tensors-cannot}
+
+The archetypal tensors $C_k$ are covariance matrices of sentence
+embeddings. They capture the \emph{shape} (directions of variance) of
+how each archetype's seed passages spread in embedding space. This is
+a statistical fingerprint, not a conceptual representation.
+
+Concretely, the model cannot recognise that:
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Shadow and Persona are dialectically related.} They are
+    stored as two independent curvature matrices. There is no mechanism
+    to represent that the Shadow is what the Persona conceals---that
+    they are the same structure seen from opposite sides.
+  \item \textbf{God in Genesis is a Great Father \emph{figure}.} The
+    model activates the Great Father tensor for Genesis because the
+    seed passages include ``I am the Lord your God'' and the words
+    overlap. If a passage described a tyrannical father using
+    entirely novel vocabulary, the tensor would not activate.
+  \item \textbf{The Hero is a narrative pattern, not a word cluster.}
+    The Hero archetype is defined by its \emph{function}---descent,
+    confrontation, return---which requires tracking narrative dynamics
+    across a sequence. The model computes a sequence mean and takes
+    a dot product. It sees hero-\emph{words}, not heroism.
+\end{itemize}
+
+The learnable query vectors $\mathbf{q}_k$ offer no escape. They learn
+statistical correlations (``when I activate this curvature, training loss
+decreases''), but they cannot learn \emph{why}.
+
+\subsection{Limitations}
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Archetype tensor rank:} With only 10~passages per archetype,
+    the covariance matrices are rank-deficient ($\text{rank} \leq 9$ in
+    $\mathbb{R}^{256 \times 256}$). The tensors capture surface
+    statistics, not the deep functional role of archetypes.
+  \item \textbf{Weight uniformity:} Archetype weights remain nearly uniform
+    ($\approx 0.0625 = 1/16$) throughout training, suggesting the model
+    has not learned strong archetypal differentiation.
+  \item \textbf{Individuation clamp:} $\mathcal{L}_{\text{individuation}}$
+    saturates at the clamp value immediately, indicating the loss scale
+    needs retuning.
+  \item \textbf{No inter-archetype structure:} The 16 tensors are linearly
+    combined with no relational modelling. Jungian theory posits
+    compensatory relationships (Puer--Senex, Shadow--Persona,
+    Anima--ego)---none of which can be captured by independent
+    weighting.
+  \item \textbf{Single-machine training:} All experiments were conducted on
+    a single Apple~M3 with 18\,GB RAM, limiting batch size and precision.
+\end{itemize}
+
+\subsection{On the Originality of Philosophical Tensors}
+
+A literature search of arXiv and related repositories revealed no prior
+work that constructs text-derived covariance tensors from philosophical or
+literary passages and uses them as fixed geometric priors to deform
+attention space. Related work in hyperbolic embeddings
+\citep{nickel2017poincare} and geometric deep learning
+\citep{bronstein2017geometric} operates in continuous curvature spaces but
+does not derive curvature from \emph{textual content}. The specific
+combination of Jungian theory, covariance geometry, and Transformer
+architecture appears to be novel.
+
+% ======================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+We have demonstrated three things:
+
+\begin{enumerate}
+  \item That a Transformer \emph{can} be designed as a structured grammar
+    encoding psychological and mythic theory---the
+    \textsc{DisattentionFormer} is an existence proof.
+  \item That such an architecture, despite its rich philosophical
+    scaffolding, still operates by the same mechanism as every other
+    model in the compilatory chain: faithful translation without
+    comprehension. It parses lexical co-occurrence where we intended
+    archetypal recognition. It computes cosine distances where we
+    intended dialectical tension.
+  \item That \emph{understanding this} is the point. The
+    \textsc{DisattentionFormer} does not outperform a vanilla Transformer
+    on perplexity---nor does it need to. Its value lies in making
+    visible what is normally hidden: that the architecture is the
+    message, and that every model, no matter how elaborate, is
+    ultimately a parser.
+\end{enumerate}
+
+Knuth argued that programs should be written for human readers, with
+machine execution secondary. We extend this: neural architectures should
+be \emph{read}, not merely prompted. The difference between a programmer
+who understands \texttt{int main()} and a user who types
+\texttt{"write me a poem"} is the difference between literacy and
+consumption. Large language models are not magic. They are compilers
+without a spec sheet---and the path forward is to write the spec sheet,
+not to marvel at the output.
+
+The act of developing software is an act of translation. The act of
+designing a neural architecture is an act of grammar. And the act of
+training on an unshuffled mythic corpus---from Genesis to
+\textit{Ulysses}---is an act of reading, performed by a machine that
+cannot read.
+
+\medskip
+\noindent
+\textit{Shut your eyes and see.}
+
+\hfill --- James Joyce, \textit{Ulysses} (3.9)
+
+% ======================================================================
+% References
+% ======================================================================
+\bibliography{references}
+
+\end{document}

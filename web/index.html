@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DisattentionFormer — Interactive Interface</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #1c2333;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --accent: #58a6ff;
+  --accent2: #bc8cff;
+  --accent3: #7ee787;
+  --danger: #f85149;
+  --gold: #d29922;
+  --v1: #58a6ff;
+  --v2: #bc8cff;
+  --baseline: #7ee787;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* --- Layout --- */
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.header h1 {
+  font-size: 18px; font-weight: 600;
+  background: linear-gradient(135deg, var(--v1), var(--v2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.header .subtitle { color: var(--text-muted); font-size: 12px; }
+
+.tabs {
+  display: flex; gap: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  padding: 10px 24px; cursor: pointer;
+  color: var(--text-muted); font-size: 13px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.tab-content { display: none; flex: 1; overflow: auto; }
+.tab-content.active { display: flex; flex-direction: column; }
+
+/* --- Chat Tab --- */
+.chat-layout { display: flex; flex: 1; overflow: hidden; }
+
+.chat-sidebar {
+  width: 280px; min-width: 280px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 16px;
+  overflow-y: auto;
+}
+
+.sidebar-section h3 {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text-muted); margin-bottom: 8px;
+}
+
+.model-btn {
+  display: block; width: 100%; padding: 10px 12px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); cursor: pointer;
+  text-align: left; font-size: 13px; margin-bottom: 6px;
+  transition: all 0.2s;
+}
+
+.model-btn:hover { border-color: var(--accent); }
+.model-btn.active { border-color: var(--accent); background: rgba(88,166,255,0.1); }
+.model-btn.active.v2 { border-color: var(--accent2); background: rgba(188,140,255,0.1); }
+.model-btn.active.baseline { border-color: var(--accent3); background: rgba(126,231,135,0.1); }
+
+.model-btn .model-name { font-weight: 600; }
+.model-btn .model-meta { font-size: 11px; color: var(--text-muted); }
+
+.param-group { margin-bottom: 12px; }
+.param-group label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+.param-group input[type="range"] { width: 100%; accent-color: var(--accent); }
+.param-group .param-val { float: right; font-size: 11px; color: var(--accent); }
+
+.compare-btn {
+  padding: 10px; background: var(--accent2); color: #000;
+  border: none; border-radius: 8px; cursor: pointer;
+  font-weight: 600; font-size: 13px; transition: opacity 0.2s;
+}
+.compare-btn:hover { opacity: 0.85; }
+
+.chat-main { flex: 1; display: flex; flex-direction: column; }
+
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 24px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+.message {
+  max-width: 85%; padding: 14px 18px;
+  border-radius: 12px; font-size: 14px; line-height: 1.7;
+  word-wrap: break-word; white-space: pre-wrap;
+}
+
+.message.user {
+  align-self: flex-end;
+  background: rgba(88,166,255,0.15);
+  border: 1px solid rgba(88,166,255,0.3);
+}
+
+.message.model {
+  align-self: flex-start;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+}
+
+.message .msg-header {
+  font-size: 11px; color: var(--text-muted); margin-bottom: 6px;
+  display: flex; gap: 12px; align-items: center;
+}
+
+.message .msg-header .model-tag {
+  padding: 2px 8px; border-radius: 4px; font-weight: 600;
+}
+
+.tag-v1 { background: rgba(88,166,255,0.2); color: var(--v1); }
+.tag-v2 { background: rgba(188,140,255,0.2); color: var(--v2); }
+.tag-baseline { background: rgba(126,231,135,0.2); color: var(--baseline); }
+
+.archetype-bar {
+  margin-top: 10px; padding: 8px 10px;
+  background: var(--bg); border-radius: 6px;
+  font-size: 11px;
+}
+
+.archetype-bar .arch-row {
+  display: flex; align-items: center; gap: 6px; margin: 2px 0;
+}
+
+.archetype-bar .arch-fill {
+  height: 6px; border-radius: 3px; transition: width 0.3s;
+}
+
+.archetype-bar .arch-name { width: 90px; color: var(--text-muted); }
+.archetype-bar .arch-val { width: 40px; text-align: right; color: var(--text-muted); }
+
+.chat-input-area {
+  padding: 16px 24px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex; gap: 12px;
+}
+
+.chat-input-area textarea {
+  flex: 1; padding: 12px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: inherit; font-size: 14px;
+  resize: none; outline: none; min-height: 44px; max-height: 120px;
+}
+
+.chat-input-area textarea:focus { border-color: var(--accent); }
+
+.send-btn {
+  padding: 0 20px; background: var(--accent); color: #000;
+  border: none; border-radius: 8px; cursor: pointer;
+  font-weight: 600; font-size: 14px; transition: opacity 0.2s;
+}
+
+.send-btn:hover { opacity: 0.85; }
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.loading {
+  display: inline-block; width: 20px; height: 20px;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* --- Benchmark Tab --- */
+.benchmark-content {
+  padding: 24px; max-width: 1200px; margin: 0 auto; width: 100%;
+}
+
+.bench-section {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px; margin-bottom: 20px;
+}
+
+.bench-section h2 {
+  font-size: 16px; margin-bottom: 16px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+
+.metrics-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.metric-card {
+  background: var(--surface2); border-radius: 8px; padding: 14px;
+  text-align: center;
+}
+
+.metric-card .metric-value {
+  font-size: 28px; font-weight: 700; margin: 4px 0;
+}
+
+.metric-card .metric-label {
+  font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-card .metric-model {
+  font-size: 10px; margin-top: 4px;
+}
+
+.chart-container {
+  position: relative; height: 300px; margin: 16px 0;
+  background: var(--surface2); border-radius: 8px; padding: 16px;
+}
+
+.bar-chart {
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: 8px; height: 250px; padding: 0 20px;
+}
+
+.bar-group {
+  display: flex; gap: 4px; align-items: flex-end;
+}
+
+.bar {
+  width: 40px; border-radius: 4px 4px 0 0;
+  transition: height 0.5s ease; position: relative;
+  cursor: pointer;
+}
+
+.bar:hover { opacity: 0.8; }
+
+.bar .bar-label {
+  position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; white-space: nowrap;
+}
+
+.bar-group-label {
+  text-align: center; font-size: 11px; color: var(--text-muted);
+  margin-top: 8px;
+}
+
+.legend {
+  display: flex; gap: 20px; justify-content: center; margin: 12px 0;
+}
+
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+.no-data {
+  text-align: center; padding: 60px 20px;
+  color: var(--text-muted); font-size: 14px;
+}
+
+.no-data code {
+  background: var(--surface2); padding: 4px 8px;
+  border-radius: 4px; font-size: 13px;
+}
+
+/* Compare mode */
+.compare-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.compare-card {
+  background: var(--surface2); border-radius: 8px; padding: 14px;
+  border: 1px solid var(--border);
+}
+
+.compare-card h4 { font-size: 13px; margin-bottom: 8px; }
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .chat-sidebar { display: none; }
+  .metrics-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1>DisattentionFormer</h1>
+      <div class="subtitle">Interactive Model Interface — Chat & Benchmark</div>
+    </div>
+    <div id="model-status" style="font-size:12px; color:var(--text-muted)">Loading...</div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" data-tab="chat">Chat</div>
+    <div class="tab" data-tab="compare">Compare All</div>
+    <div class="tab" data-tab="benchmark">Benchmark</div>
+  </div>
+
+  <!-- Chat Tab -->
+  <div class="tab-content active" id="tab-chat">
+    <div class="chat-layout">
+      <div class="chat-sidebar">
+        <div class="sidebar-section">
+          <h3>Model</h3>
+          <div id="model-buttons"></div>
+        </div>
+        <div class="sidebar-section">
+          <h3>Parameters</h3>
+          <div class="param-group">
+            <label>Temperature <span class="param-val" id="temp-val">0.80</span></label>
+            <input type="range" id="temperature" min="0.1" max="2.0" step="0.05" value="0.8">
+          </div>
+          <div class="param-group">
+            <label>Top-p <span class="param-val" id="topp-val">0.90</span></label>
+            <input type="range" id="top-p" min="0.1" max="1.0" step="0.05" value="0.9">
+          </div>
+          <div class="param-group">
+            <label>Max tokens <span class="param-val" id="maxt-val">200</span></label>
+            <input type="range" id="max-tokens" min="20" max="500" step="10" value="200">
+          </div>
+        </div>
+        <div class="sidebar-section">
+          <h3>Quick Prompts</h3>
+          <div id="quick-prompts"></div>
+        </div>
+      </div>
+
+      <div class="chat-main">
+        <div class="chat-messages" id="chat-messages">
+          <div style="text-align:center; padding:40px; color:var(--text-muted)">
+            <p style="font-size:24px; margin-bottom:12px">⟁</p>
+            <p>Select a model and type a prompt to begin.</p>
+            <p style="font-size:12px; margin-top:8px">
+              The models are small (~27M params) trained on mythic/Joycean texts.<br>
+              They produce corpus-flavoured text, not coherent prose.
+            </p>
+          </div>
+        </div>
+        <div class="chat-input-area">
+          <textarea id="prompt-input" placeholder="Enter a prompt..." rows="1"></textarea>
+          <button class="send-btn" id="send-btn" disabled>Generate</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Compare Tab -->
+  <div class="tab-content" id="tab-compare">
+    <div class="benchmark-content">
+      <div class="bench-section">
+        <h2>Side-by-Side Generation</h2>
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
+          Same prompt, all models. See how different architectures shape the output.
+        </p>
+        <div style="display:flex; gap:12px; margin-bottom:16px">
+          <textarea id="compare-prompt" placeholder="Enter a prompt..."
+            style="flex:1; padding:12px; background:var(--surface2); border:1px solid var(--border);
+            border-radius:8px; color:var(--text); font-family:inherit; font-size:14px;
+            resize:none; outline:none;" rows="2">Stately , plump</textarea>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <div class="param-group" style="margin:0">
+              <label>Tokens <span class="param-val" id="comp-tok-val">200</span></label>
+              <input type="range" id="comp-tokens" min="50" max="500" step="10" value="200"
+                style="width:120px">
+            </div>
+            <button class="compare-btn" id="compare-btn">Generate All</button>
+          </div>
+        </div>
+        <div id="compare-results"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Benchmark Tab -->
+  <div class="tab-content" id="tab-benchmark">
+    <div class="benchmark-content" id="benchmark-content">
+      <div class="no-data" id="bench-loading">
+        Loading benchmark results...
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+let models = {};
+let activeModel = null;
+let benchData = null;
+let generating = false;
+
+const QUICK_PROMPTS = [
+  "In the beginning",
+  "Stately , plump",
+  "the hero descended into",
+  "She remembered the time when",
+  "the mask he wore concealed",
+  "I will not serve that in which",
+  "the river flowed on carrying",
+  "He opened the door and saw",
+  "The mirror showed a face that was not quite",
+  "Like Odysseus before the sirens , he",
+];
+
+const MODEL_COLORS = { v1: '#58a6ff', v2: '#bc8cff', baseline: '#7ee787' };
+const MODEL_NAMES = {
+  v1: 'DisattentionFormer V1',
+  v2: 'DisattentionFormer V2 (Titans)',
+  baseline: 'Baseline Transformer',
+};
+
+// ---------------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', async () => {
+  setupTabs();
+  setupSliders();
+  setupInput();
+  await loadModels();
+  loadBenchmark();
+});
+
+function setupTabs() {
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+}
+
+function setupSliders() {
+  const pairs = [
+    ['temperature', 'temp-val', v => v.toFixed(2)],
+    ['top-p', 'topp-val', v => v.toFixed(2)],
+    ['max-tokens', 'maxt-val', v => Math.round(v)],
+    ['comp-tokens', 'comp-tok-val', v => Math.round(v)],
+  ];
+  pairs.forEach(([id, valId, fmt]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      document.getElementById(valId).textContent = fmt(parseFloat(el.value));
+    });
+  });
+}
+
+function setupInput() {
+  const input = document.getElementById('prompt-input');
+  const btn = document.getElementById('send-btn');
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!generating && activeModel) doGenerate();
+    }
+  });
+
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  });
+
+  btn.addEventListener('click', () => { if (!generating && activeModel) doGenerate(); });
+
+  document.getElementById('compare-btn').addEventListener('click', doCompareAll);
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+async function loadModels() {
+  try {
+    const res = await fetch('/api/models');
+    models = await res.json();
+    renderModelButtons();
+    document.getElementById('model-status').textContent =
+      Object.keys(models).length + ' models loaded';
+
+    if (models.v1) selectModel('v1');
+    else if (Object.keys(models).length > 0) selectModel(Object.keys(models)[0]);
+  } catch (e) {
+    document.getElementById('model-status').textContent = 'Error loading models';
+  }
+}
+
+function renderModelButtons() {
+  const container = document.getElementById('model-buttons');
+  container.innerHTML = '';
+  for (const [key, info] of Object.entries(models)) {
+    const btn = document.createElement('button');
+    btn.className = 'model-btn' + (key !== 'v1' ? ' ' + key : '');
+    btn.innerHTML = `
+      <div class="model-name" style="color:${MODEL_COLORS[key]}">${info.name}</div>
+      <div class="model-meta">${(info.params/1e6).toFixed(1)}M params · ${info.n_layers}L · ${info.n_heads}H</div>
+      <div class="model-meta">${info.has_archetypes ? '⟁ archetypes' : ''}${info.has_memory ? ' · 🧠 memory' : ''}</div>
+    `;
+    btn.addEventListener('click', () => selectModel(key));
+    container.appendChild(btn);
+  }
+
+  // Quick prompts
+  const qp = document.getElementById('quick-prompts');
+  qp.innerHTML = '';
+  QUICK_PROMPTS.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'model-btn';
+    btn.style.fontSize = '12px';
+    btn.textContent = p;
+    btn.addEventListener('click', () => {
+      document.getElementById('prompt-input').value = p;
+      if (activeModel) doGenerate();
+    });
+    qp.appendChild(btn);
+  });
+}
+
+function selectModel(key) {
+  activeModel = key;
+  document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+  const btns = document.getElementById('model-buttons').children;
+  const keys = Object.keys(models);
+  for (let i = 0; i < keys.length; i++) {
+    if (keys[i] === key) btns[i].classList.add('active');
+  }
+  document.getElementById('send-btn').disabled = false;
+}
+
+// ---------------------------------------------------------------------------
+// Generation
+// ---------------------------------------------------------------------------
+async function doGenerate() {
+  const input = document.getElementById('prompt-input');
+  const prompt = input.value.trim();
+  if (!prompt || !activeModel) return;
+
+  generating = true;
+  document.getElementById('send-btn').disabled = true;
+  input.value = '';
+  input.style.height = 'auto';
+
+  addMessage('user', prompt);
+  const loadingEl = addMessage('model', '<div class="loading"></div>', activeModel, true);
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: activeModel,
+        prompt: prompt,
+        max_tokens: parseInt(document.getElementById('max-tokens').value),
+        temperature: parseFloat(document.getElementById('temperature').value),
+        top_p: parseFloat(document.getElementById('top-p').value),
+      }),
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      loadingEl.querySelector('.message-body').innerHTML =
+        `<span style="color:var(--danger)">${data.error}</span>`;
+    } else {
+      let html = formatGeneration(data, prompt);
+      loadingEl.querySelector('.message-body').innerHTML = html;
+    }
+  } catch (e) {
+    loadingEl.querySelector('.message-body').innerHTML =
+      `<span style="color:var(--danger)">Error: ${e.message}</span>`;
+  }
+
+  generating = false;
+  document.getElementById('send-btn').disabled = false;
+}
+
+function addMessage(type, content, modelKey, isRaw) {
+  const container = document.getElementById('chat-messages');
+  // Remove welcome message
+  const welcome = container.querySelector('div[style]');
+  if (welcome && type === 'user') welcome.remove();
+
+  const msg = document.createElement('div');
+  msg.className = 'message ' + type;
+
+  if (type === 'model' && modelKey) {
+    const tagClass = 'tag-' + modelKey;
+    msg.innerHTML = `
+      <div class="msg-header">
+        <span class="model-tag ${tagClass}">${MODEL_NAMES[modelKey] || modelKey}</span>
+      </div>
+      <div class="message-body">${isRaw ? content : escapeHtml(content)}</div>
+    `;
+  } else {
+    msg.innerHTML = `<div class="message-body">${escapeHtml(content)}</div>`;
+  }
+
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
+  return msg;
+}
+
+function formatGeneration(data, prompt) {
+  let html = '';
+
+  // Highlight prompt in the full text
+  const fullText = data.full_text || '';
+  const promptEnd = fullText.indexOf(data.generated_text || '');
+  if (promptEnd > 0) {
+    html += `<span style="color:var(--gold)">${escapeHtml(fullText.substring(0, promptEnd))}</span>`;
+    html += escapeHtml(fullText.substring(promptEnd));
+  } else {
+    html += escapeHtml(fullText);
+  }
+
+  // Stats
+  html += `<div style="margin-top:10px; font-size:11px; color:var(--text-muted)">`;
+  html += `${data.n_tokens} tokens · ${data.time_s}s · ${data.tokens_per_s} tok/s`;
+  html += `</div>`;
+
+  // Archetype bar
+  if (data.archetypes) {
+    html += renderArchetypeBar(data.archetypes);
+  }
+
+  return html;
+}
+
+function renderArchetypeBar(arch) {
+  if (!arch || !arch.weights) return '';
+
+  const sorted = Object.entries(arch.weights)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
+
+  const max = sorted[0][1];
+
+  let html = `<div class="archetype-bar">`;
+  html += `<div style="margin-bottom:6px; color:var(--accent)">⟁ Dominant: <b>${arch.dominant}</b></div>`;
+
+  for (const [name, val] of sorted) {
+    const pct = (val / max * 100).toFixed(0);
+    const hue = name === arch.dominant ? '210' : '220';
+    html += `<div class="arch-row">
+      <span class="arch-name">${name}</span>
+      <div style="flex:1; background:var(--bg); border-radius:3px; height:6px">
+        <div class="arch-fill" style="width:${pct}%; background:hsl(${hue},60%,60%)"></div>
+      </div>
+      <span class="arch-val">${(val * 100).toFixed(1)}%</span>
+    </div>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+// ---------------------------------------------------------------------------
+// Compare All
+// ---------------------------------------------------------------------------
+async function doCompareAll() {
+  const prompt = document.getElementById('compare-prompt').value.trim();
+  if (!prompt) return;
+
+  const container = document.getElementById('compare-results');
+  container.innerHTML = '<div style="text-align:center"><div class="loading"></div> Generating from all models...</div>';
+
+  try {
+    const res = await fetch('/api/generate_all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        max_tokens: parseInt(document.getElementById('comp-tokens').value),
+        temperature: parseFloat(document.getElementById('temperature').value),
+        top_p: parseFloat(document.getElementById('top-p').value),
+      }),
+    });
+    const data = await res.json();
+
+    let html = '<div class="compare-grid">';
+    for (const [key, result] of Object.entries(data)) {
+      if (result.error) continue;
+      const color = MODEL_COLORS[key] || '#888';
+      html += `<div class="compare-card" style="border-color:${color}40">
+        <h4 style="color:${color}">${MODEL_NAMES[key] || key}</h4>
+        <div style="font-size:13px; line-height:1.7; white-space:pre-wrap">`;
+
+      const ft = result.full_text || '';
+      const gt = result.generated_text || '';
+      const pi = ft.indexOf(gt);
+      if (pi > 0) {
+        html += `<span style="color:var(--gold)">${escapeHtml(ft.substring(0, pi))}</span>${escapeHtml(ft.substring(pi))}`;
+      } else {
+        html += escapeHtml(ft);
+      }
+
+      html += `</div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:8px">
+          ${result.n_tokens} tokens · ${result.time_s}s · ${result.tokens_per_s} tok/s
+        </div>`;
+
+      if (result.archetypes) {
+        html += renderArchetypeBar(result.archetypes);
+      }
+
+      html += `</div>`;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = `<div style="color:var(--danger)">Error: ${e.message}</div>`;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Benchmark
+// ---------------------------------------------------------------------------
+async function loadBenchmark() {
+  const container = document.getElementById('benchmark-content');
+  try {
+    const res = await fetch('/api/benchmark');
+    if (!res.ok) throw new Error('No results');
+    benchData = await res.json();
+    renderBenchmark(container, benchData);
+  } catch (e) {
+    container.innerHTML = `<div class="no-data">
+      <p style="font-size:24px; margin-bottom:12px">📊</p>
+      <p>No benchmark results yet.</p>
+      <p style="margin-top:8px">Run: <code>python3 benchmark.py</code></p>
+    </div>`;
+  }
+}
+
+function renderBenchmark(container, data) {
+  const modelKeys = ['v1', 'v2', 'baseline'].filter(k => data[k]);
+  if (modelKeys.length === 0) {
+    container.innerHTML = '<div class="no-data">No model results in benchmark data.</div>';
+    return;
+  }
+
+  let html = '';
+
+  // --- Overview Cards ---
+  html += '<div class="bench-section"><h2>Overview</h2><div class="metrics-grid">';
+  for (const k of modelKeys) {
+    const m = data[k];
+    const color = MODEL_COLORS[k];
+    html += `
+      <div class="metric-card">
+        <div class="metric-label">Perplexity</div>
+        <div class="metric-value" style="color:${color}">${m.perplexity?.perplexity ?? '—'}</div>
+        <div class="metric-model" style="color:${color}">${m.name}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">CE Loss</div>
+        <div class="metric-value" style="color:${color}">${m.perplexity?.avg_loss ?? '—'}</div>
+        <div class="metric-model" style="color:${color}">${m.name}</div>
+      </div>`;
+  }
+  html += '</div></div>';
+
+  // --- Perplexity Bar Chart ---
+  html += '<div class="bench-section"><h2>Perplexity Comparison</h2>';
+  html += renderLegend(modelKeys);
+  html += '<div class="chart-container">';
+  html += renderBarChart(modelKeys, [
+    { label: 'Perplexity', getValue: k => data[k]?.perplexity?.perplexity },
+    { label: 'CE Loss', getValue: k => data[k]?.perplexity?.avg_loss },
+    { label: 'Entropy', getValue: k => data[k]?.mean_entropy },
+  ]);
+  html += '</div></div>';
+
+  // --- Long-Context Chart ---
+  const ctxSizes = data.context_sizes || [128, 256, 512];
+  html += '<div class="bench-section"><h2>Long-Context Utilisation</h2>';
+  html += '<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">Perplexity on next-64 tokens after feeding N tokens of context. Lower = better use of context.</p>';
+  html += renderLegend(modelKeys);
+  html += '<div class="chart-container">';
+  html += renderBarChart(modelKeys, ctxSizes.map(sz => ({
+    label: `ctx=${sz}`,
+    getValue: k => data[k]?.long_context?.[sz]?.perplexity,
+  })));
+  html += '</div></div>';
+
+  // --- Diversity ---
+  html += '<div class="bench-section"><h2>Lexical Diversity (Long Generations)</h2>';
+  html += renderLegend(modelKeys);
+  html += '<div class="chart-container">';
+  html += renderBarChart(modelKeys, [
+    { label: 'TTR', getValue: k => data[k]?.diversity_long?.ttr },
+    { label: 'Unique Bigrams', getValue: k => data[k]?.diversity_long?.unique_bigrams },
+    { label: 'Unique Trigrams', getValue: k => data[k]?.diversity_long?.unique_trigrams },
+  ]);
+  html += '</div></div>';
+
+  // --- Speed ---
+  html += '<div class="bench-section"><h2>Inference Speed</h2>';
+  html += '<div class="metrics-grid">';
+  for (const k of modelKeys) {
+    const m = data[k];
+    const color = MODEL_COLORS[k];
+    html += `<div class="metric-card">
+      <div class="metric-label">Tokens/s</div>
+      <div class="metric-value" style="color:${color}">${m.speed?.tokens_per_sec ?? '—'}</div>
+      <div class="metric-model" style="color:${color}">${m.name}</div>
+    </div>`;
+  }
+  html += '</div></div>';
+
+  // --- Archetype Analysis ---
+  const archModels = modelKeys.filter(k => data[k]?.archetypes);
+  if (archModels.length > 0) {
+    html += '<div class="bench-section"><h2>Archetype Activation</h2>';
+    for (const k of archModels) {
+      const arch = data[k].archetypes;
+      const color = MODEL_COLORS[k];
+      html += `<h3 style="color:${color}; font-size:14px; margin:12px 0 8px">${data[k].name}</h3>`;
+      html += '<div style="display:flex; flex-wrap:wrap; gap:8px">';
+      const sorted = Object.entries(arch.mean_weights).sort((a,b) => b[1]-a[1]);
+      const max = sorted[0][1];
+      for (const [name, val] of sorted) {
+        const pct = (val / max * 100).toFixed(0);
+        html += `<div style="background:var(--surface2); border-radius:6px; padding:6px 10px; font-size:11px; min-width:100px">
+          <div style="color:var(--text-muted)">${name}</div>
+          <div style="background:var(--bg); border-radius:3px; height:4px; margin:4px 0">
+            <div style="width:${pct}%; height:100%; background:${color}; border-radius:3px"></div>
+          </div>
+          <div style="color:${color}">${(val * 100).toFixed(2)}%</div>
+        </div>`;
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // --- Generation Samples ---
+  for (const k of modelKeys) {
+    const gens = data[k]?.generations?.medium;
+    if (!gens || gens.length === 0) continue;
+    html += `<div class="bench-section">
+      <h2 style="color:${MODEL_COLORS[k]}">${data[k].name} — Sample Generations (200 tokens)</h2>`;
+    for (const s of gens.slice(0, 5)) {
+      html += `<div style="margin:12px 0; padding:12px; background:var(--surface2); border-radius:8px">
+        <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px">${s.description || ''}</div>
+        <div style="font-size:13px; line-height:1.7; white-space:pre-wrap">`;
+
+      const ft = s.generated_text || '';
+      const p = s.prompt || '';
+      if (ft.startsWith(p)) {
+        html += `<span style="color:var(--gold)">${escapeHtml(p)}</span>${escapeHtml(ft.substring(p.length))}`;
+      } else {
+        html += escapeHtml(ft);
+      }
+
+      html += `</div>
+        <div style="font-size:10px; color:var(--text-muted); margin-top:6px">
+          TTR=${s.diversity?.ttr ?? '—'} · rep=${s.diversity?.repetition_rate ?? '—'}
+        </div>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
+}
+
+function renderLegend(keys) {
+  return '<div class="legend">' +
+    keys.map(k => `<div class="legend-item"><div class="legend-dot" style="background:${MODEL_COLORS[k]}"></div>${MODEL_NAMES[k] || k}</div>`).join('') +
+    '</div>';
+}
+
+function renderBarChart(modelKeys, metrics) {
+  const allVals = [];
+  metrics.forEach(m => modelKeys.forEach(k => {
+    const v = m.getValue(k);
+    if (v != null) allVals.push(v);
+  }));
+  const maxVal = Math.max(...allVals, 0.01);
+
+  let html = '<div class="bar-chart">';
+  for (const metric of metrics) {
+    html += '<div style="text-align:center"><div class="bar-group">';
+    for (const k of modelKeys) {
+      const val = metric.getValue(k);
+      const h = val != null ? (val / maxVal * 220) : 0;
+      html += `<div class="bar" style="height:${h}px; background:${MODEL_COLORS[k]}">
+        <div class="bar-label">${val != null ? (val > 10 ? val.toFixed(1) : val.toFixed(3)) : '—'}</div>
+      </div>`;
+    }
+    html += `</div><div class="bar-group-label">${metric.label}</div></div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+// ---------------------------------------------------------------------------
+// Utils
+// ---------------------------------------------------------------------------
+function escapeHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
